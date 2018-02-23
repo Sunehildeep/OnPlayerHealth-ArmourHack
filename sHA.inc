@@ -1,7 +1,7 @@
 /*
 	Health And Armour Detection
 	- Sunehildeep
-	V1.0
+	V1.1
 */
 
 #if defined ACHEALTH_Included
@@ -237,6 +237,9 @@ forward OnPlayerHealthHack(playerid, Float:original, Float:anticheat);
 forward OnPlayerArmourHack(playerid, Float:original, Float:anticheat);
 #endif
 
+#if defined OnPlayerGiveDamageHealth
+forward OnPlayerGiveDamageHealth(playerid, damagedid, Float: amount, weaponid, bodypart);
+#endif
 
 /*============================================
 *** Timers
@@ -426,14 +429,6 @@ public OnPlayerExitVehicle(playerid, vehicleid)
 public OnPlayerTakeDamage(playerid, issuerid, Float: amount, weaponid, bodypart)
 {
 	if(issuerid == INVALID_PLAYER_ID) hcInfo[playerid][acHealth] -= amount;
-	else
-	{
-	    new Float:armour;
-	    GetPlayerArmour(playerid, armour);
-	    
-	    if(armour > 0.0) hcInfo[playerid][acArmour] -= amount;
-	    else hcInfo[playerid][acHealth] -= amount;
-	}
 	
 	#if defined OnPlayerTakeDamageHealth
         return OnPlayerTakeDamageHealth(playerid, issuerid, Float: amount, weaponid, bodypart);
@@ -442,6 +437,22 @@ public OnPlayerTakeDamage(playerid, issuerid, Float: amount, weaponid, bodypart)
     #endif
 }
 
+public OnPlayerGiveDamage(playerid, damagedid, Float: amount, weaponid, bodypart)
+{
+	if(damagedid != INVALID_PLAYER_ID)
+	{
+	    new Float:armour;
+	    GetPlayerArmour(damagedid, armour);
+
+	    if(armour > 0.0) hcInfo[damagedid][acArmour] -= amount;
+	    else hcInfo[damagedid][acHealth] -= amount;
+	}
+	#if defined OnPlayerGiveDamageHealth
+        return OnPlayerGiveDamageHealth(playerid, damagedid, Float: amount, weaponid, bodypart)
+    #else
+    	return 1;
+    #endif
+}
 /*============================================
 ***	Hooked Functions
 ==============================================*/
@@ -503,6 +514,14 @@ stock hcGetPlayerSpeed(playerid)
 #endif
 
 #define SetPlayerHealth acSetPlayerHealth
+
+#if defined _ALS_OnPlayerGiveDamage
+	#undef OnPlayerGiveDamage
+#else
+	#define _ALS_OnPlayerGiveDamage
+#endif
+
+#define OnPlayerGiveDamage OnPlayerGiveDamageHealth
 
 #if defined _ALS_OnPlayerTakeDamage
   #undef OnPlayerTakeDamage
