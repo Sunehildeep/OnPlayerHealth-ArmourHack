@@ -451,7 +451,7 @@ public OnPlayerGiveDamage(playerid, damagedid, Float: amount, weaponid, bodypart
 	    else hcInfo[damagedid][acHealth] -= amount;
 	}
 	#if defined OnPlayerGiveDamageHealth
-        return OnPlayerGiveDamageHealth(playerid, damagedid, Float: amount, weaponid, bodypart)
+        return OnPlayerGiveDamageHealth(playerid, damagedid, Float: amount, weaponid, bodypart);
     #else
     	return 1;
     #endif
