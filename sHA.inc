@@ -1,7 +1,7 @@
 /*
 	Health And Armour Detection
 	- Sunehildeep
-	V1.1
+	V1.2
 */
 
 #if defined ACHEALTH_Included
@@ -35,7 +35,8 @@ enum healthHack
 	bool:aImmune,
 	Float:acArmour,
 	hcTimer,
-	pTick
+	pTick,
+	bool:isSpawned
 };
 
 new hcInfo[MAX_PLAYERS][healthHack];
@@ -257,6 +258,7 @@ public sprunk_ResetImmune(playerid)
 	hcInfo[playerid][hImmune] = false;
 	new Float:health;
 	GetPlayerHealth(playerid, health);
+	if(health > 99) SetPlayerHealth(playerid, 99);
 	hcInfo[playerid][acHealth] = health;
 	return 1;
 }
@@ -288,7 +290,7 @@ public checkHealthLoss(playerid)
 forward CheckHealth(playerid);
 public CheckHealth(playerid)
 {
-	if(playerid == INVALID_PLAYER_ID || IsPlayerPaused(playerid)) return 1;
+	if(!hcInfo[playerid][isSpawned] || IsPlayerPaused(playerid)) return 1;
 	
 	// Thanks to Emmet for OnPlayerUseVending
 	for(new i = 0; i < sizeof(s_aVendingMachines); i ++)
@@ -350,11 +352,7 @@ public CheckHealth(playerid)
 ==============================================*/
 public OnPlayerDeath(playerid, killerid, reason)
 {
-	hcInfo[playerid][aImmune] = true;
-    SetTimerEx("health_ResetImmune", 3000, false, "i", playerid);
-    
-    hcInfo[playerid][hImmune] = true;
-	SetTimerEx("armour_ResetImmune", 3000, false, "i", playerid);
+	hcInfo[playerid][isSpawned] = false;
 	
     hcInfo[playerid][acArmour] = 0.0;
     hcInfo[playerid][acHealth] = 0.0;
@@ -389,12 +387,13 @@ public OnPlayerDisconnect(playerid, reason)
 
 public OnPlayerConnect(playerid)
 {
+    hcInfo[playerid][isSpawned] = false;
     hcInfo[playerid][aImmune] = false;
     hcInfo[playerid][hImmune] = false;
-    
+
     hcInfo[playerid][acArmour] = 0.0;
-    hcInfo[playerid][acHealth] = 0.0;
-    
+    hcInfo[playerid][acHealth] = 99.0;
+
     hcInfo[playerid][hcTimer] = SetTimerEx("CheckHealth", 1000, true, "i", playerid);
     
     #if defined OnPlayerConnectHealth
@@ -406,8 +405,12 @@ public OnPlayerConnect(playerid)
 
 public OnPlayerSpawn(playerid)
 {
-    if(hcInfo[playerid][acHealth] == 0.0) SetPlayerHealth(playerid, 100); // Just in case if health is not set at spawn
-
+	new health;
+	health = floatround(hcInfo[playerid][acHealth], floatround_round);
+    if(health == 0) {
+		SetPlayerHealth(playerid, 99);
+	}
+	hcInfo[playerid][isSpawned] = true;
     #if defined OnPlayerSpawnHealth
         return OnPlayerSpawnHealth(playerid);
     #else
@@ -466,7 +469,10 @@ stock OnPlayerUseVending(playerid)
 stock acSetPlayerHealth(playerid, Float:amount)
 {
 	if(!hcInfo[playerid][hImmune]) SetTimerEx("health_ResetImmune", 3000, false, "i", playerid);
-	
+	printf("Old %f", amount);
+	if(amount > 99.0) amount = 99.0;
+	if(amount < 0.0) amount = 0.0;
+	printf("New %f", amount);
 	hcInfo[playerid][hImmune] = true;
 	hcInfo[playerid][acHealth] = amount;
 	
@@ -476,7 +482,9 @@ stock acSetPlayerHealth(playerid, Float:amount)
 stock acSetPlayerArmour(playerid, Float:amount)
 {
 	if(!hcInfo[playerid][aImmune]) SetTimerEx("armour_ResetImmune", 3000, false, "i", playerid);
-	
+	if(amount > 99.0) amount = 99.0;
+	if(amount < 0.0) amount = 0.0;
+
 	hcInfo[playerid][aImmune] = true;
 	hcInfo[playerid][acArmour] = amount;
 	
