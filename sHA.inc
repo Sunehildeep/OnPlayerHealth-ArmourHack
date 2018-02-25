@@ -1,7 +1,7 @@
 /*
 	Health And Armour Detection
 	- Sunehildeep
-	V1.2
+	V1.3
 */
 
 #if defined ACHEALTH_Included
@@ -36,7 +36,7 @@ enum healthHack
 	Float:acArmour,
 	hcTimer,
 	pTick,
-	bool:isSpawned
+	bool:hisSpawned
 };
 
 new hcInfo[MAX_PLAYERS][healthHack];
@@ -290,7 +290,7 @@ public checkHealthLoss(playerid)
 forward CheckHealth(playerid);
 public CheckHealth(playerid)
 {
-	if(!hcInfo[playerid][isSpawned] || IsPlayerPaused(playerid)) return 1;
+	if(!hcInfo[playerid][hisSpawned] || IsPlayerPaused(playerid)) return 1;
 	
 	// Thanks to Emmet for OnPlayerUseVending
 	for(new i = 0; i < sizeof(s_aVendingMachines); i ++)
@@ -352,7 +352,7 @@ public CheckHealth(playerid)
 ==============================================*/
 public OnPlayerDeath(playerid, killerid, reason)
 {
-	hcInfo[playerid][isSpawned] = false;
+	hcInfo[playerid][hisSpawned] = false;
 	
     hcInfo[playerid][acArmour] = 0.0;
     hcInfo[playerid][acHealth] = 0.0;
@@ -387,7 +387,7 @@ public OnPlayerDisconnect(playerid, reason)
 
 public OnPlayerConnect(playerid)
 {
-    hcInfo[playerid][isSpawned] = false;
+    hcInfo[playerid][hisSpawned] = false;
     hcInfo[playerid][aImmune] = false;
     hcInfo[playerid][hImmune] = false;
 
@@ -410,7 +410,7 @@ public OnPlayerSpawn(playerid)
     if(health == 0) {
 		SetPlayerHealth(playerid, 99);
 	}
-	hcInfo[playerid][isSpawned] = true;
+	hcInfo[playerid][hisSpawned] = true;
     #if defined OnPlayerSpawnHealth
         return OnPlayerSpawnHealth(playerid);
     #else
@@ -504,6 +504,12 @@ stock hcGetPlayerSpeed(playerid)
     return INVALID_PLAYER_ID;
 }
 
+stock acTogglePlayerSpectating(playerid, bool:type)
+{
+	if(!type) SetPlayerHealth(playerid, 99);
+	return TogglePlayerSpectating(playerid, type);
+}
+
 /*============================================
 ***	Hookings
 ==============================================*/
@@ -587,13 +593,32 @@ stock hcGetPlayerSpeed(playerid)
 
 #define OnPlayerSpawn OnPlayerSpawnHealth
 
+#if defined _ALS_TogglePlayerSpectating
+	#undef TogglePlayerSpectating
+#else
+	#define _ALS_TogglePlayerSpectating
+#endif
+
+#define TogglePlayerSpectating acTogglePlayerSpectating
+
 #else // It's a filterscript
+
+stock acTogglePlayerSpectatingFS(playerid, bool:type)
+	return CallLocalFunction("acTogglePlayerSpectating", "ii", playerid, type);
 
 stock acSetPlayerHealthFS(playerid, Float:amount)
 	return CallLocalFunction("acSetPlayerHealth", "if", playerid, amount);
 
 stock acSetPlayerArmourFS(playerid, Float:amount)
 	return CallLocalFunction("acSetPlayerArmour", "if", playerid, amount);
+
+#if defined _ALS_TogglePlayerSpectating
+	#undef TogglePlayerSpectating
+#else
+	#define _ALS_TogglePlayerSpectating
+#endif
+
+#define TogglePlayerSpectating acTogglePlayerSpectatingFS
 
 #if defined _ALS_SetPlayerArmour
 	#undef SetPlayerArmour
