@@ -1,7 +1,7 @@
 /*
 	Health And Armour Detection
 	- Sunehildeep
-	V1.3
+	V1.4
 */
 
 #if defined ACHEALTH_Included
@@ -13,10 +13,6 @@
 #include <a_samp>
 
 #if !defined FILTERSCRIPT //It's a gamemode
-/*============================================
-*** DEFINES
-==============================================*/
-#define IsPlayerPaused(%1) GetTickCount() > (hcInfo[%1][pTick]+2000)
 
 /*============================================
 ***	INCLUDE FUNCTIONS
@@ -36,6 +32,7 @@ enum healthHack
 	Float:acArmour,
 	hcTimer,
 	pTick,
+	bool:afkImmune,
 	bool:hisSpawned
 };
 
@@ -287,11 +284,25 @@ public checkHealthLoss(playerid)
 	return 1;
 }
 
+forward ResetAFKImmune(playerid);
+public ResetAFKImmune(playerid)
+{
+	hcInfo[playerid][afkImmune] = false;
+	return 1;
+}
+
 forward CheckHealth(playerid);
 public CheckHealth(playerid)
 {
-	if(!hcInfo[playerid][hisSpawned] || IsPlayerPaused(playerid)) return 1;
+	if(IsPlayerPaused(playerid) && !hcInfo[playerid][afkImmune]) hcInfo[playerid][afkImmune] = true;
+	else if(!IsPlayerPaused(playerid) && hcInfo[playerid][afkImmune]) {
+	    SetPlayerHealth(playerid, hcInfo[playerid][acHealth]);
+	    SetPlayerArmour(playerid, hcInfo[playerid][acArmour]);
+		SetTimerEx("ResetAFKImmune", 3000, false, "i", playerid);
+	}
 	
+	if(!hcInfo[playerid][hisSpawned] || IsPlayerPaused(playerid) || hcInfo[playerid][afkImmune]) return 1;
+
 	// Thanks to Emmet for OnPlayerUseVending
 	for(new i = 0; i < sizeof(s_aVendingMachines); i ++)
     {
@@ -317,7 +328,7 @@ public CheckHealth(playerid)
 	    new healthAc;
 	    healthAc = floatround(hcInfo[playerid][acHealth], floatround_round);
 
-	    if(healthOrg > healthAc)
+	    if(healthOrg-healthAc > 5)
 	    {
 	        #if defined OnPlayerHealthHack
 	        OnPlayerHealthHack(playerid, healthOrg, healthAc);
@@ -336,8 +347,7 @@ public CheckHealth(playerid)
 
 	    new armourAc;
 	    armourAc = floatround(hcInfo[playerid][acArmour], floatround_round);
-
-	    if(armourOrg > armourAc)
+		if(armourOrg-armourAc > 5)
 	    {
 	        #if defined OnPlayerArmourHack
 	        OnPlayerArmourHack(playerid, armourOrg, armourAc);
@@ -393,7 +403,7 @@ public OnPlayerConnect(playerid)
 
     hcInfo[playerid][acArmour] = 0.0;
     hcInfo[playerid][acHealth] = 99.0;
-
+	hcInfo[playerid][afkImmune] = false;
     hcInfo[playerid][hcTimer] = SetTimerEx("CheckHealth", 1000, true, "i", playerid);
     
     #if defined OnPlayerConnectHealth
@@ -444,12 +454,13 @@ public OnPlayerGiveDamage(playerid, damagedid, Float: amount, weaponid, bodypart
 {
 	if(damagedid != INVALID_PLAYER_ID)
 	{
-	    new Float:armour;
+		new Float:armour;
 	    GetPlayerArmour(damagedid, armour);
 
 	    if(armour > 0.0) hcInfo[damagedid][acArmour] -= amount;
-	    else hcInfo[damagedid][acHealth] -= amount;
+    	else hcInfo[damagedid][acHealth] -= amount;
 	}
+
 	#if defined OnPlayerGiveDamageHealth
         return OnPlayerGiveDamageHealth(playerid, damagedid, Float: amount, weaponid, bodypart);
     #else
@@ -459,11 +470,17 @@ public OnPlayerGiveDamage(playerid, damagedid, Float: amount, weaponid, bodypart
 /*============================================
 ***	Hooked Functions
 ==============================================*/
-stock OnPlayerUseVending(playerid)
+static OnPlayerUseVending(playerid)
 {
     if(!hcInfo[playerid][hImmune]) SetTimerEx("sprunk_ResetImmune", 2500, false, "i", playerid);
     hcInfo[playerid][hImmune] = true;
 	return 1;
+}
+
+static IsPlayerPaused(playerid)
+{
+    if(GetTickCount() > (hcInfo[playerid][pTick]+2000)) return true;
+    else return false;
 }
 
 stock acSetPlayerHealth(playerid, Float:amount)
@@ -491,7 +508,7 @@ stock acSetPlayerArmour(playerid, Float:amount)
 	return SetPlayerArmour(playerid, amount);
 }
 
-stock hcGetPlayerSpeed(playerid)
+static hcGetPlayerSpeed(playerid)
 {
     if(playerid != INVALID_PLAYER_ID)
     {
